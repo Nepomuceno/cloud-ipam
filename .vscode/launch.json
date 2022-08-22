@@ -12,7 +12,7 @@
             "program": "${workspaceFolder}",
             "args": [
                 "-s",
-                "$TEST_STORAGE_ACCOUNT",
+                "ganepomutfstate",
             ]
         },
         {
@@ -23,7 +23,7 @@
             "program": "${workspaceFolder}",
             "args": [
                 "-s",
-                "$TEST_STORAGE_ACCOUNT",
+                "ganepomutfstate",
                 "env",
                 "list"
             ]
@@ -36,11 +36,30 @@
             "program": "${workspaceFolder}",
             "args": [
                 "-s",
-                "$TEST_STORAGE_ACCOUNT",
+                "ganepomutfstate",
                 "env",
                 "add",
                 "--name",
                 "Amazing List",
+            ]
+        },
+        {
+            "name": "run sub add",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "args": [
+                "-s",
+                "ganepomutfstate",
+                "sub",
+                "add",
+                "--name",
+                "Amazing Sub",
+                "--environment-id",
+                "amazing-list",
+                "--id",
+                "0560a729-8178-41a5-adbc-638e087abc50"
             ]
         }
     ]

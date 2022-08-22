@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"net"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
@@ -40,9 +41,11 @@ func listSubscriptions(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	for _, env := range subscriptions {
-		cmd.Printf("%s, %s, %s\n", env.RowKey, env.Name, env.IpRanges)
+	content, err := json.MarshalIndent(subscriptions, "", "  ")
+	if err != nil {
+		return err
 	}
+	cmd.Printf("%s\n", content)
 	return nil
 }
 
@@ -52,7 +55,25 @@ func addOrUpdateSubscription(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	ipRange, err := cmd.Flags().GetIPNet("ip-range")
+	if err != nil {
+		return err
+	}
+	if ipRange.IP.To4() == nil || ipRange.IP.Equal(net.IPv4zero) {
+		ipMask, err := cmd.Flags().GetIPv4Mask("ip-mask")
+		if err != nil {
+			return err
+		}
+		leading, other := ipMask.Size()
+		_ = other
+		nextIpRange, err := client.GetNextAvailableIpRange(environmentID, leading)
+		if err != nil {
+			return err
+		}
+		ipRange = *nextIpRange
+	}
+	id, err := cmd.Flags().GetString("id")
 	if err != nil {
 		return err
 	}
@@ -60,9 +81,8 @@ func addOrUpdateSubscription(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	id, err := cmd.Flags().GetString("id")
-	if err != nil {
-		return err
+	if name == "" {
+		name = id
 	}
 
 	subscription := model.SubscriptionDefinition{
@@ -71,14 +91,18 @@ func addOrUpdateSubscription(cmd *cobra.Command, args []string) error {
 			RowKey:       id,
 		},
 		Name:     name,
-		IpRanges: ipRange.String(),
+		IPRanges: ipRange.String(),
 	}
 
 	err = client.AddOrUpdateSubscription(subscription)
 	if err != nil {
 		return err
 	}
-	cmd.Printf("Subcription %s added or updated\n", id)
+	content, err := json.MarshalIndent(subscription, "", "  ")
+	if err != nil {
+		return err
+	}
+	cmd.Printf("%s\n", content)
 	return nil
 }
 
@@ -95,7 +119,7 @@ func deleteSubscription(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	cmd.Printf("Subscription %s deleted\n", id)
+	cmd.Printf("{ id: '%s' }\n", id)
 	return nil
 }
 
@@ -105,7 +129,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	subscriptionCmd.PersistentFlags().String("environment-id", "", "Environment ID for that subscription")
+	subscriptionCmd.PersistentFlags().StringP("environment-id", "e", "", "Environment ID for that subscription")
 	err = subscriptionCmd.MarkPersistentFlagRequired("environment-id")
 	if err != nil {
 		panic(err)
@@ -114,11 +138,11 @@ func init() {
 	addSubCmd.Flags().IPNet("ip-range", *defaultIPCIDR, "IP range to be used by the subscription")
 	addSubCmd.Flags().StringP("name", "n", "", "Name of the subscription")
 	addSubCmd.Flags().StringP("id", "i", "", "ID of the subscription")
+	defaultMask := net.IPv4Mask(0xff, 0xff, 0xff, 0x00) // 255.255.255.0
+	addSubCmd.Flags().IPMaskP("ip-mask", "m", defaultMask, "IP mask to be used by the subscription")
+	addSubCmd.MarkFlagsMutuallyExclusive("ip-range", "ip-mask")
+
 	err = addSubCmd.MarkFlagRequired("id")
-	if err != nil {
-		panic(err)
-	}
-	err = addSubCmd.MarkFlagRequired("ip-range")
 	if err != nil {
 		panic(err)
 	}

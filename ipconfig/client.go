@@ -14,6 +14,9 @@ type IpConfigClient struct {
 }
 
 func GetClient(tableName string, storageName string, ctx context.Context) (*IpConfigClient, error) {
+	if storageName == "" {
+		return nil, fmt.Errorf("storageName is required")
+	}
 	serviceURL := fmt.Sprintf("https://%s.table.core.windows.net", storageName)
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
@@ -33,4 +36,9 @@ func GetClient(tableName string, storageName string, ctx context.Context) (*IpCo
 		return nil, err
 	}
 	return &IpConfigClient{client, ctx}, err
+}
+
+func (client *IpConfigClient) RemoveTable() error {
+	_, err := client.Delete(client.ctx, nil)
+	return err
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
+	"github.com/mepomuceno/cloud-ipam/ipconfig"
 	"github.com/mepomuceno/cloud-ipam/model"
 	"github.com/spf13/cobra"
 )
@@ -39,7 +40,7 @@ func listEnvironments(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	for _, env := range environment {
-		cmd.Printf("%s, %s, %s\n", env.RowKey, env.Name, env.IpRanges)
+		cmd.Printf("%s, %s, %s\n", env.RowKey, env.Name, env.IPRanges)
 	}
 	return nil
 }
@@ -61,17 +62,17 @@ func addOrUpdateEnvironment(cmd *cobra.Command, args []string) error {
 		id = strings.ReplaceAll(strings.ToLower(name), " ", "-")
 	}
 
-	if id == "EnvironmentDefinition" {
-		return fmt.Errorf("EnvironmentDefinition is a reserved id")
+	if id == ipconfig.ENVIRONMENT_PARTITION_KEY {
+		return fmt.Errorf("%s is a reserved id", ipconfig.ENVIRONMENT_PARTITION_KEY)
 	}
 
 	environment := model.EnvironmentDefinition{
 		Entity: aztables.Entity{
-			PartitionKey: "EnvironmentDefinition",
+			PartitionKey: ipconfig.ENVIRONMENT_PARTITION_KEY,
 			RowKey:       id,
 		},
 		Name:     name,
-		IpRanges: ipRange.String(),
+		IPRanges: ipRange.String(),
 	}
 
 	err = client.AddOrUpdateEnvironment(environment)

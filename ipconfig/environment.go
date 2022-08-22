@@ -9,10 +9,12 @@ import (
 	"github.com/mepomuceno/cloud-ipam/model"
 )
 
+const ENVIRONMENT_PARTITION_KEY = "EnvironmentDefinition"
+
 func (client *IpConfigClient) ListEnvironments() ([]model.EnvironmentDefinition, error) {
 	result := make([]model.EnvironmentDefinition, 0)
 	entities := client.NewListEntitiesPager(&aztables.ListEntitiesOptions{
-		Filter: to.Ptr("PartitionKey eq 'EnvironmentDefinition'"),
+		Filter: to.Ptr("PartitionKey eq '" + ENVIRONMENT_PARTITION_KEY + "'"),
 	})
 	for entities.More() {
 		pageResp, err := entities.NextPage(client.ctx)
@@ -56,12 +58,12 @@ func (client *IpConfigClient) DeleteEnvironment(id string) error {
 			return fmt.Errorf("environment %s is not empty", id)
 		}
 	}
-	_, err := client.DeleteEntity(client.ctx, "EnvironmentDefinition", id, nil)
+	_, err := client.DeleteEntity(client.ctx, ENVIRONMENT_PARTITION_KEY, id, nil)
 	return err
 }
 
 func (client *IpConfigClient) GetEnvironment(id string) (model.EnvironmentDefinition, error) {
-	entity, err := client.GetEntity(client.ctx, "EnvironmentDefinition", id, nil)
+	entity, err := client.GetEntity(client.ctx, ENVIRONMENT_PARTITION_KEY, id, nil)
 	if err != nil {
 		return model.EnvironmentDefinition{}, err
 	}

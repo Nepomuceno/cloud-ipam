@@ -3,6 +3,7 @@ package ipconfig
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net"
 	"strings"
 
@@ -16,7 +17,7 @@ func (client *IpConfigClient) AddOrUpdateSubscription(subscription model.Subscri
 	if err != nil {
 		return err
 	}
-	_, err = client.UpdateEntity(client.ctx, entity, nil)
+	_, err = client.UpsertEntity(client.ctx, entity, nil)
 	return err
 }
 
@@ -57,36 +58,46 @@ func (client *IpConfigClient) ListSubscriptions(environmentID string) ([]model.S
 	return result, nil
 }
 
-func (client *IpConfigClient) NextAvailableIpRange(environmentID string, subnetRangeSize int) (string, error) {
+func (client *IpConfigClient) GetNextAvailableIpRange(environmentID string, subnetRangeSize int) (*net.IPNet, error) {
 	netEnvironment, err := client.GetEnvironment(environmentID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	ipranges := strings.Split(netEnvironment.IpRanges, ",")
+	ipranges := strings.Split(netEnvironment.IPRanges, ",")
 	usedIpRanges, err := client.GetUsedRangesForEnvironment(environmentID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	for _, iprange := range ipranges {
-		startIp, _, err := net.ParseCIDR(iprange)
+		_, mainRange, err := net.ParseCIDR(iprange)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		ipmask := net.CIDRMask(subnetRangeSize, 32)
-		ipnet := net.IPNet{IP: startIp, Mask: ipmask}
-
-		for _, ok := usedIpRanges[ipnet.String()]; !ok; {
-			newIp := nextIP(startIp, uint(32-subnetRangeSize))
-			ipnet.IP = newIp
-			fmt.Printf("Trying %s\n", ipnet.String())
+		ipnetResult := net.IPNet{IP: mainRange.IP, Mask: ipmask}
+		for ok := ipPresentinAny(usedIpRanges, ipnetResult.IP); ok && mainRange.Contains(ipnetResult.IP); ok = ipPresentinAny(usedIpRanges, ipnetResult.IP) {
+			newIp := nextIP(ipnetResult.IP, uint(math.Pow(2, float64(32-subnetRangeSize))))
+			ipnetResult.IP = newIp
+		}
+		if mainRange.Contains(ipnetResult.IP) {
+			return &ipnetResult, nil
 		}
 
 	}
-	return "", nil
+	return nil, fmt.Errorf("no available ip range found")
 }
 
-func (client *IpConfigClient) GetUsedRangesForEnvironment(environmentID string) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
+func ipPresentinAny(ipRanges []*net.IPNet, ip net.IP) bool {
+	for _, ipRange := range ipRanges {
+		if ipRange.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+func (client *IpConfigClient) GetUsedRangesForEnvironment(environmentID string) ([]*net.IPNet, error) {
+	result := make([]*net.IPNet, 0)
 	pages := client.NewListEntitiesPager(&aztables.ListEntitiesOptions{
 		Filter: to.Ptr(fmt.Sprintf("PartitionKey eq '%s'", environmentID)),
 	})
@@ -101,9 +112,13 @@ func (client *IpConfigClient) GetUsedRangesForEnvironment(environmentID string) 
 			if err != nil {
 				return result, err
 			}
-			ipRanges := strings.Split(definition.IpRanges, ",")
+			ipRanges := strings.Split(definition.IPRanges, ",")
 			for _, ipRange := range ipRanges {
-				result[ipRange] = true
+				_, ipnet, err := net.ParseCIDR(ipRange)
+				if err != nil {
+					return result, err
+				}
+				result = append(result, ipnet)
 			}
 		}
 	}

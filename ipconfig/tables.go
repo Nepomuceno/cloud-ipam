@@ -20,3 +20,4 @@ func createIfDoesntExistTable(tableName string, serviceClient *aztables.ServiceC
 	}
 	return nil
 }
+
