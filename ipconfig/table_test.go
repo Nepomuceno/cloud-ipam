@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/mepomuceno/cloud-ipam/ipconfig"
+	"github.com/nepomuceno/cloud-ipam/ipconfig"
 )
 
 func getTestClient(storageAccountName string) (*ipconfig.IpConfigClient, error) {

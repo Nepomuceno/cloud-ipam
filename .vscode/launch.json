@@ -5,14 +5,37 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "generate docs",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
+            "args": [
+                "generate-docs"
+            ]
+        },
+        {
+            "name": "start http server",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
+            "args": [
+                "serve"
+            ]
+        },
+        {
             "name": "run root",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
             "args": [
                 "-s",
-                "ganepomutfstate",
+                "${env:STORAGE_ACCOUNT_NAME}",
             ]
         },
         {
@@ -21,9 +44,8 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
             "args": [
-                "-s",
-                "ganepomutfstate",
                 "env",
                 "list"
             ]
@@ -34,13 +56,12 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
             "args": [
-                "-s",
-                "ganepomutfstate",
                 "env",
                 "add",
                 "--name",
-                "Amazing List",
+                "test-env",
             ]
         },
         {
@@ -49,15 +70,14 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
             "args": [
-                "-s",
-                "ganepomutfstate",
                 "sub",
                 "add",
                 "--name",
-                "Amazing Sub",
+                "Test Sub",
                 "--environment-id",
-                "amazing-list",
+                "test-env",
                 "--id",
                 "0560a729-8178-41a5-adbc-638e087abc50"
             ]

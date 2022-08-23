@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
-	"github.com/mepomuceno/cloud-ipam/ipconfig"
-	"github.com/mepomuceno/cloud-ipam/model"
+	"github.com/nepomuceno/cloud-ipam/ipconfig"
+	"github.com/nepomuceno/cloud-ipam/model"
 	"github.com/spf13/cobra"
 )
 

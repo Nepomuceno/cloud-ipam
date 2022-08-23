@@ -9,7 +9,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
-	"github.com/mepomuceno/cloud-ipam/model"
+	"github.com/nepomuceno/cloud-ipam/model"
 )
 
 func (client *IpConfigClient) AddOrUpdateSubscription(subscription model.SubscriptionDefinition) error {
@@ -34,6 +34,57 @@ func (client *IpConfigClient) GetSubscription(environmentID, id string) (model.S
 	}
 	err = json.Unmarshal(entity.Value, &result)
 	return result, err
+}
+
+func (client *IpConfigClient) ValidateSubscriptionRanges(environmentID string) ([]model.SubcriptionValidationResult, error) {
+	result := make([]model.SubcriptionValidationResult, 0)
+	netEnvironment, err := client.GetEnvironment(environmentID)
+	if err != nil {
+		return result, err
+	}
+	ipranges := strings.Split(netEnvironment.IPRanges, ",")
+	availableRanges := make([]*net.IPNet, 0)
+	for _, iprange := range ipranges {
+		_, mainRange, err := net.ParseCIDR(iprange)
+		if err != nil {
+			return result, err
+		}
+		availableRanges = append(availableRanges, mainRange)
+	}
+	subscriptions, err := client.ListSubscriptions(environmentID)
+	if err != nil {
+		return result, err
+	}
+	for _, subscription := range subscriptions {
+		ipRanges := strings.Split(subscription.IPRanges, ",")
+		for _, iprange := range ipRanges {
+			_, ipnet, err := net.ParseCIDR(iprange)
+			if err != nil {
+				return result, err
+			}
+			if !ipPresentinAny(availableRanges, ipnet.IP) || !ipPresentinAny(availableRanges, lastIp(ipnet)) {
+				result = append(result, model.SubcriptionValidationResult{
+					SubscriptionID: subscription.RowKey,
+					EnvironmentID:  subscription.PartitionKey,
+					Valid:          false,
+					Error:          fmt.Errorf("ip range %s is not available", iprange),
+				})
+			} else {
+				result = append(result, model.SubcriptionValidationResult{
+					SubscriptionID: subscription.RowKey,
+					EnvironmentID:  subscription.PartitionKey,
+					Valid:          true,
+				})
+			}
+
+		}
+	}
+	return result, nil
+}
+
+func lastIp(ipnet *net.IPNet) net.IP {
+	size, max := ipnet.Mask.Size()
+	return nextIP(ipnet.IP, uint(math.Pow(2, float64(max-size)))-1)
 }
 
 func (client *IpConfigClient) ListSubscriptions(environmentID string) ([]model.SubscriptionDefinition, error) {

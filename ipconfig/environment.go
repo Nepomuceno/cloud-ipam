@@ -6,7 +6,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
-	"github.com/mepomuceno/cloud-ipam/model"
+	"github.com/nepomuceno/cloud-ipam/model"
 )
 
 const ENVIRONMENT_PARTITION_KEY = "EnvironmentDefinition"
